@@ -29,6 +29,9 @@
         <slot />
       </main>
     </div>
+    
+    <!-- Toast Messages -->
+    <PrimeToast />
   </div>
 </template>
 
@@ -37,6 +40,7 @@ import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import TopBar from '@/Components/TopBar.vue'
 import SideBar from '@/Components/SideBar.vue'
+import PrimeToast from 'primevue/toast'
 
 defineProps({
   title: String,

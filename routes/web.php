@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\RoleController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -16,11 +17,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard', [
-        'auth' => [
-            'user' => auth()->user()
-        ]
-    ]);
+    return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -54,6 +51,29 @@ Route::middleware('auth')->group(function () {
     // Location routes
     Route::resource('locations', LocationController::class);
     Route::get('locations-search', [LocationController::class, 'search'])->name('locations.search');
+    
+    // Role management routes (protected by permission middleware)
+    Route::middleware(['permission:view_users'])->group(function () {
+        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+        Route::get('roles-hierarchy', [RoleController::class, 'hierarchy'])->name('roles.hierarchy');
+        Route::get('roles-statistics', [RoleController::class, 'statistics'])->name('roles.statistics');
+    });
+    
+    Route::middleware(['permission:create_users'])->group(function () {
+        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+        Route::post('roles/{role}/duplicate', [RoleController::class, 'duplicate'])->name('roles.duplicate');
+    });
+    
+    Route::middleware(['permission:edit_users'])->group(function () {
+        Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+        Route::post('roles/{role}/assign-user', [RoleController::class, 'assignUser'])->name('roles.assign-user');
+        Route::post('roles/{role}/remove-user', [RoleController::class, 'removeUser'])->name('roles.remove-user');
+    });
+    
+    Route::middleware(['permission:delete_users'])->group(function () {
+        Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
+    });
 });
 
 // API test routes tanpa auth untuk testing fetch API

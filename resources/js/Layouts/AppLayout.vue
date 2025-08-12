@@ -1,18 +1,18 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Topbar -->
-    <TopBar :user="user" @logout="handleLogout" />
-    
     <!-- Sidebar Navigation -->
     <SideBar :is-open="sidebarOpen" @toggle="toggleSidebar" />
     
+    <!-- Topbar -->
+    <TopBar :user="user" :sidebar-open="sidebarOpen" @logout="handleLogout" />
+    
     <!-- Main Content -->
     <div :class="[
-      'transition-all duration-300 ease-in-out',
+      'pt-16 transition-all duration-300 ease-in-out',
       sidebarOpen ? 'ml-64' : 'ml-16'
     ]">
       <!-- Content Header -->
-      <div class="bg-white border-b border-gray-200 px-6 py-4">
+      <div class="bg-gray-50 px-6 py-6">
         <div class="flex items-center justify-between">
           <div>
             <h1 v-if="title" class="text-2xl font-semibold text-gray-900">{{ title }}</h1>
@@ -25,7 +25,7 @@
       </div>
 
       <!-- Page Content -->
-      <main class="p-6">
+      <main class="p-6 bg-gray-50 min-h-[calc(100vh-10rem)]">
         <slot />
       </main>
     </div>

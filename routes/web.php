@@ -5,6 +5,8 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ShiftController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,10 +27,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
-    // Users management routes (for demo purposes)
-    Route::get('/users', function() {
-        return Inertia::render('Users/Index');
-    })->name('users.index');
+    // User Management Routes
+    Route::resource('users', UserController::class);
+    Route::post('users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role');
+    Route::delete('users/{user}/remove-role', [UserController::class, 'removeRole'])->name('users.remove-role');
+    Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::patch('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
     
     // Reports routes (for demo purposes) 
     Route::get('/reports', function() {
@@ -51,6 +55,16 @@ Route::middleware('auth')->group(function () {
     // Location routes
     Route::resource('locations', LocationController::class);
     Route::get('locations-search', [LocationController::class, 'search'])->name('locations.search');
+    
+    // Shift management routes
+    Route::resource('shifts', ShiftController::class);
+    Route::post('shifts/{shift}/duplicate', [ShiftController::class, 'duplicate'])->name('shifts.duplicate');
+    Route::patch('shifts/{shift}/toggle-status', [ShiftController::class, 'toggleStatus'])->name('shifts.toggle-status');
+    Route::post('shifts/{shift}/assign-users', [ShiftController::class, 'assignUsers'])->name('shifts.assign-users');
+    Route::delete('shifts/{shift}/remove-user/{user}', [ShiftController::class, 'removeUser'])->name('shifts.remove-user');
+    Route::get('shifts/{shift}/available-users', [ShiftController::class, 'availableUsers'])->name('shifts.available-users');
+    Route::post('shifts/{shift}/check-conflicts', [ShiftController::class, 'checkConflicts'])->name('shifts.check-conflicts');
+    Route::get('shift-schedule', [ShiftController::class, 'schedule'])->name('shifts.schedule');
     
     // Role management routes (protected by permission middleware)
     Route::middleware(['permission:view_users'])->group(function () {

@@ -1,18 +1,10 @@
 <template>
-  <header class="bg-white border-b border-gray-200 fixed w-full top-0 z-50">
-    <div class="px-6 py-4">
-      <div class="flex items-center justify-between">
-        <!-- Left Side -->
-        <div class="flex items-center space-x-4">
-          <!-- Logo -->
-          <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span class="text-white font-bold text-sm">S</span>
-            </div>
-            <h1 class="text-xl font-bold text-gray-900">SIGAP</h1>
-          </div>
-        </div>
-
+  <header class="bg-white border-b border-gray-200 fixed top-0 right-0 z-50 h-16" :class="[
+    'transition-all duration-300 ease-in-out',
+    sidebarOpen ? 'left-64' : 'left-16'
+  ]">
+    <div class="px-6 py-4 h-full flex items-center">
+      <div class="flex items-center justify-end w-full">
         <!-- Right Side -->
         <div class="flex items-center space-x-4">
           <!-- Notifications -->
@@ -98,7 +90,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 defineProps({
-  user: Object
+  user: Object,
+  sidebarOpen: Boolean
 })
 
 const emit = defineEmits(['logout'])

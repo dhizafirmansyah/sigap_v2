@@ -68,6 +68,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the shifts assigned to the user.
+     */
+    public function shifts()
+    {
+        return $this->belongsToMany(Shift::class, 'user_shifts')
+            ->withPivot(['start_date', 'end_date', 'is_active', 'notes'])
+            ->withTimestamps();
+    }
+
+    /**
      * Check if user has a specific permission.
      */
     public function hasPermission($permission): bool

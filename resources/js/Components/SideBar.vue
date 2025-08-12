@@ -1,17 +1,33 @@
 <template>
   <aside :class="[
-    'fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 ease-in-out z-40',
+    'fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out z-40',
     isOpen ? 'w-64' : 'w-16'
   ]">
     <div class="flex flex-col h-full">
-      <!-- Toggle Button -->
-      <div class="p-3 border-b border-gray-200">
-        <button 
-          @click="toggleSidebar"
-          class="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <i :class="isOpen ? 'pi pi-angle-left' : 'pi pi-angle-right'" class="text-gray-500"></i>
-        </button>
+      <!-- Logo Section with Toggle Button -->
+      <div class="px-4 py-4 border-b border-gray-200 h-16 flex items-center">
+        <div v-if="isOpen" class="flex items-center justify-between w-full">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <span class="text-white font-bold text-sm">S</span>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900">SIGAP</h1>
+          </div>
+          <button 
+            @click="toggleSidebar"
+            class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+          >
+            <i class="pi pi-angle-left text-gray-500 text-sm"></i>
+          </button>
+        </div>
+        <div v-else class="flex justify-center w-full">
+          <button 
+            @click="toggleSidebar"
+            class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+          >
+            <i class="pi pi-angle-right text-gray-500 text-sm"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Navigation -->
@@ -138,7 +154,7 @@ const menuGroups = computed(() => [
         href: '/shifts',
         active: page.url.startsWith('/shifts'),
         icon: 'pi pi-clock',
-        label: 'Shifts',
+        label: 'Shift Management',
         show: canAccessShifts.value
       },
       {

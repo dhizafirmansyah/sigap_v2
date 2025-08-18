@@ -167,6 +167,145 @@
                     </template>
                 </Card>
 
+                <!-- Contract Information -->
+                <Card>
+                    <template #title>
+                        <div class="flex items-center">
+                            <i class="pi pi-file-text mr-2"></i>
+                            Informasi Kontrak
+                        </div>
+                    </template>
+                    <template #content>
+                        <div v-if="employee?.employee_contract" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-500 mb-1">Nama Kontrak</label>
+                                    <p class="text-lg font-semibold text-gray-900">{{ employee.employee_contract.name }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-500 mb-1">Tipe Kontrak</label>
+                                    <Tag 
+                                        :value="employee.employee_contract.type" 
+                                        severity="info"
+                                        class="font-medium"
+                                    />
+                                </div>
+                                <div v-if="employee.employee_contract.description" class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-500 mb-1">Deskripsi</label>
+                                    <p class="text-gray-900">{{ employee.employee_contract.description }}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Contract Benefits if available -->
+                            <div v-if="employee.employee_contract.benefits && Object.keys(employee.employee_contract.benefits).length > 0">
+                                <label class="block text-sm font-medium text-gray-500 mb-2">Benefits</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div 
+                                        v-for="(value, key) in employee.employee_contract.benefits" 
+                                        :key="key"
+                                        class="bg-green-50 rounded-lg p-3 border border-green-200"
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-green-800">{{ formatBenefitKey(key) }}</span>
+                                            <span class="text-sm text-green-600">{{ formatBenefitValue(value) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <i class="pi pi-file-text text-gray-300 text-4xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No Contract Assigned</h3>
+                            <p class="text-gray-500 mb-4">This employee doesn't have any contract assigned yet.</p>
+                            <Button 
+                                label="Assign Contract" 
+                                icon="pi pi-plus" 
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                @click="assignContract"
+                            />
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Shift Information -->
+                <Card>
+                    <template #title>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="pi pi-clock mr-2"></i>
+                                Jadwal Shift
+                            </div>
+                            <Button 
+                                icon="pi pi-plus" 
+                                label="Add Shift"
+                                size="small"
+                                severity="secondary"
+                                outlined
+                                @click="addShift"
+                            />
+                        </div>
+                    </template>
+                    <template #content>
+                        <div v-if="employee?.employee_shifts && employee.employee_shifts.length > 0" class="space-y-4">
+                            <div 
+                                v-for="employeeShift in employee.employee_shifts" 
+                                :key="employeeShift.id"
+                                class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                            >
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center">
+                                        <Tag 
+                                            :value="employeeShift.shift?.name || 'Unknown Shift'" 
+                                            severity="info"
+                                            class="mr-2"
+                                        />
+                                        <span class="text-sm text-gray-500">{{ formatDate(employeeShift.date) }}</span>
+                                    </div>
+                                    <Button 
+                                        icon="pi pi-times" 
+                                        severity="danger"
+                                        text
+                                        size="small"
+                                        @click="removeShift(employeeShift.id)"
+                                        v-tooltip="'Remove Shift'"
+                                    />
+                                </div>
+                                
+                                <div v-if="employeeShift.shift" class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">Start Time:</span>
+                                        <span class="font-medium ml-1">{{ employeeShift.shift.start_time }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">End Time:</span>
+                                        <span class="font-medium ml-1">{{ employeeShift.shift.end_time }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="employeeShift.notes" class="mt-2">
+                                    <span class="text-gray-500 text-sm">Notes:</span>
+                                    <p class="text-gray-900 text-sm mt-1">{{ employeeShift.notes }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-8">
+                            <i class="pi pi-clock text-gray-300 text-4xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No Shifts Assigned</h3>
+                            <p class="text-gray-500 mb-4">This employee doesn't have any shifts assigned yet.</p>
+                            <Button 
+                                label="Assign Shift" 
+                                icon="pi pi-plus" 
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                @click="addShift"
+                            />
+                        </div>
+                    </template>
+                </Card>
+
                 <!-- Notes -->
                 <Card v-if="employee?.notes">
                     <template #title>
@@ -201,6 +340,16 @@
                             <div class="text-center p-4 bg-green-50 rounded-lg">
                                 <p class="text-sm font-medium text-green-600">Status Kontrak</p>
                                 <p class="text-lg font-semibold text-green-700">{{ contractStatus }}</p>
+                            </div>
+
+                            <div class="text-center p-4 bg-purple-50 rounded-lg">
+                                <p class="text-sm font-medium text-purple-600">Total Shifts</p>
+                                <p class="text-2xl font-bold text-purple-700">{{ employee?.employee_shifts?.length || 0 }}</p>
+                            </div>
+
+                            <div v-if="employee?.employee_contract" class="text-center p-4 bg-orange-50 rounded-lg">
+                                <p class="text-sm font-medium text-orange-600">Contract Type</p>
+                                <p class="text-lg font-semibold text-orange-700">{{ employee.employee_contract.type }}</p>
                             </div>
                         </div>
                     </template>
@@ -403,6 +552,36 @@ const formatCurrency = (amount) => {
     }).format(amount)
 }
 
+const formatBenefitKey = (key) => {
+    const keyMap = {
+        'tunjangan_transport': 'Tunjangan Transport',
+        'tunjangan_makan': 'Tunjangan Makan',
+        'asuransi_kesehatan': 'Asuransi Kesehatan',
+        'jamsostek': 'Jamsostek',
+        'cuti_tahunan': 'Cuti Tahunan'
+    }
+    return keyMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
+
+const formatBenefitValue = (value) => {
+    if (typeof value === 'boolean') {
+        return value ? '✓ Ya' : '✗ Tidak'
+    }
+    if (typeof value === 'number') {
+        // Check if it looks like currency (> 10000)
+        if (value > 10000) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(value)
+        }
+        // Otherwise it's probably days, hours, etc.
+        return value.toString()
+    }
+    return value.toString()
+}
+
 const formatGender = (gender) => {
     const genderMap = {
         'male': 'Laki-laki',
@@ -542,6 +721,33 @@ const generateReport = () => {
         severity: 'info',
         summary: 'Info',
         detail: 'Fitur generate report akan segera tersedia',
+        life: 3000
+    })
+}
+
+const assignContract = () => {
+    toast.add({
+        severity: 'info',
+        summary: 'Info',
+        detail: 'Fitur assign contract akan segera tersedia',
+        life: 3000
+    })
+}
+
+const addShift = () => {
+    toast.add({
+        severity: 'info',
+        summary: 'Info',
+        detail: 'Fitur add shift akan segera tersedia',
+        life: 3000
+    })
+}
+
+const removeShift = (shiftId) => {
+    toast.add({
+        severity: 'info',
+        summary: 'Info',
+        detail: 'Fitur remove shift akan segera tersedia',
         life: 3000
     })
 }

@@ -26,7 +26,7 @@
     </template>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
       <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
         <div class="flex items-center justify-between">
           <div>
@@ -45,7 +45,7 @@
             <p class="text-green-100 text-sm font-medium">Active</p>
             <p class="text-3xl font-bold">{{ getStatusCount('active') }}</p>
           </div>
-                    <div class="bg-white bg-opacity-20 rounded-lg p-3">
+          <div class="bg-white bg-opacity-20 rounded-lg p-3">
             <i class="pi pi-check-circle text-2xl"></i>
           </div>
         </div>
@@ -66,7 +66,19 @@
       <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-purple-100 text-sm font-medium">This Month</p>
+            <p class="text-purple-100 text-sm font-medium">With Contracts</p>
+            <p class="text-3xl font-bold">{{ getEmployeesWithContractCount() }}</p>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-lg p-3">
+            <i class="pi pi-file-text text-2xl"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-teal-100 text-sm font-medium">This Month</p>
             <p class="text-3xl font-bold">{{ getNewEmployeesCount() }}</p>
           </div>
           <div class="bg-white bg-opacity-20 rounded-lg p-3">
@@ -114,7 +126,7 @@
         <!-- Expandable filters -->
         <Transition name="slide-down">
           <div v-show="showFilters" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <!-- Status Filter with chips -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -148,6 +160,23 @@
                   optionLabel="name"
                   optionValue="id"
                   placeholder="All Locations"
+                  class="w-full"
+                  showClear
+                  @change="applyClientSideFilters"
+                />
+              </div>
+
+              <!-- Contract Filter -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <i class="pi pi-file-text mr-1"></i>Contract
+                </label>
+                <Dropdown
+                  v-model="filters.contract_id"
+                  :options="contractOptions"
+                  optionLabel="name"
+                  optionValue="id"
+                  placeholder="All Contracts"
                   class="w-full"
                   showClear
                   @change="applyClientSideFilters"
@@ -239,7 +268,7 @@
           :rowsPerPageOptions="[10, 25, 50]"
           class="p-datatable-customers"
           dataKey="id"
-          :globalFilterFields="['name', 'email', 'position']"
+          :globalFilterFields="['name', 'email', 'position', 'employee_contract.name', 'location.name']"
         >
           <template #empty>
             <div class="text-center py-12">
@@ -316,6 +345,46 @@
               <div class="flex items-center text-gray-700">
                 <i class="pi pi-map-marker text-orange-500 mr-2"></i>
                 <span class="font-medium">{{ slotProps.data.location?.name || '-' }}</span>
+              </div>
+            </template>
+          </Column>
+
+          <Column field="employee_contract.name" header="Contract" :sortable="true" class="min-w-48">
+            <template #body="slotProps">
+              <div v-if="slotProps.data.employee_contract">
+                <div class="font-medium text-gray-900">{{ slotProps.data.employee_contract.name }}</div>
+                <div class="text-sm text-gray-500 flex items-center">
+                  <i class="pi pi-file-text mr-1"></i>
+                  {{ slotProps.data.employee_contract.type }}
+                </div>
+              </div>
+              <div v-else class="text-gray-400 italic">
+                No contract assigned
+              </div>
+            </template>
+          </Column>
+
+          <Column header="Current Shifts" class="min-w-48">
+            <template #body="slotProps">
+              <div v-if="slotProps.data.employee_shifts && slotProps.data.employee_shifts.length > 0">
+                <div class="flex flex-wrap gap-1">
+                  <Tag 
+                    v-for="(employeeShift, index) in slotProps.data.employee_shifts.slice(0, 2)" 
+                    :key="index"
+                    :value="employeeShift.shift?.name || 'Unknown Shift'"
+                    severity="info"
+                    class="text-xs"
+                  />
+                  <Tag 
+                    v-if="slotProps.data.employee_shifts.length > 2"
+                    :value="`+${slotProps.data.employee_shifts.length - 2} more`"
+                    severity="secondary"
+                    class="text-xs"
+                  />
+                </div>
+              </div>
+              <div v-else class="text-gray-400 italic">
+                No shifts assigned
               </div>
             </template>
           </Column>
@@ -531,6 +600,7 @@ import { debounce } from 'lodash'
 const props = defineProps({
     employees: Object,
     locations: Array,
+    contracts: Array,
     filters: Object
 })
 
@@ -554,7 +624,8 @@ const filteredEmployees = ref(props.employees)
 const filters = reactive({
     search: props.filters?.search || '',
     status: props.filters?.status ?? null,
-    location_id: props.filters?.location_id ?? null
+    location_id: props.filters?.location_id ?? null,
+    contract_id: props.filters?.contract_id ?? null
 })
 
 // Options for dropdowns
@@ -565,6 +636,28 @@ const statusOptions = [
     { label: 'Resigned', value: 'resigned' },
     { label: 'Terminated', value: 'terminated' }
 ]
+
+// Contract options - use props data first, fallback to extracting from employee data
+const contractOptions = computed(() => {
+    // Use contracts from props if available
+    if (props.contracts && props.contracts.length > 0) {
+        return props.contracts
+    }
+    
+    // Fallback: extract from employee data
+    if (!originalEmployees.value?.data) return []
+    
+    const contracts = originalEmployees.value.data
+        .map(emp => emp.employee_contract)
+        .filter((contract, index, self) => 
+            contract && self.findIndex(c => c?.id === contract.id) === index
+        )
+    
+    return contracts.map(contract => ({
+        id: contract.id,
+        name: contract.name
+    }))
+})
 
 // Stats computed functions
 const getStatusCount = (status) => {
@@ -582,6 +675,11 @@ const getNewEmployeesCount = () => {
         const hireDate = new Date(emp.hire_date)
         return hireDate.getMonth() === currentMonth && hireDate.getFullYear() === currentYear
     }).length
+}
+
+const getEmployeesWithContractCount = () => {
+    if (!filteredEmployees.value?.data) return 0
+    return filteredEmployees.value.data.filter(emp => emp.employee_contract).length
 }
 
 // JavaScript-based filtering function
@@ -613,6 +711,14 @@ const applyClientSideFilters = () => {
             // Handle both direct location_id and nested location object
             const empLocationId = emp.location_id || emp.location?.id
             return empLocationId === filters.location_id
+        })
+    }
+
+    // Apply contract filter
+    if (filters.contract_id !== null) {
+        filtered = filtered.filter(emp => {
+            const empContractId = emp.employee_contract_id || emp.employee_contract?.id
+            return empContractId === filters.contract_id
         })
     }
 
@@ -727,6 +833,7 @@ const clearFilters = () => {
     filters.search = ''
     filters.status = null
     filters.location_id = null
+    filters.contract_id = null
     searchQuery.value = ''
     
     // Reset to show all data

@@ -8,6 +8,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\PresenceController;
+use App\Http\Controllers\EmployeeContractController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -73,6 +74,17 @@ Route::middleware('auth')->group(function () {
     Route::post('presences/{presence}/check-out', [PresenceController::class, 'checkOut'])->name('presences.check-out');
     Route::get('presences/reports/daily', [PresenceController::class, 'dailyReport'])->name('presences.daily-report');
     Route::get('presences/reports/monthly', [PresenceController::class, 'monthlyReport'])->name('presences.monthly-report');
+    
+    // Employee Contract management routes
+    Route::resource('employee-contracts', EmployeeContractController::class);
+    Route::get('employee-contracts/{id}/employees', [EmployeeContractController::class, 'employees'])->name('employee-contracts.employees');
+    Route::post('employee-contracts/{id}/assign-employees', [EmployeeContractController::class, 'assignEmployees'])->name('employee-contracts.assign-employees');
+    Route::post('employee-contracts/remove-employees', [EmployeeContractController::class, 'removeEmployees'])->name('employee-contracts.remove-employees');
+    Route::post('employee-contracts/{id}/toggle-status', [EmployeeContractController::class, 'toggleStatus'])->name('employee-contracts.toggle-status');
+    Route::post('employee-contracts/{id}/duplicate', [EmployeeContractController::class, 'duplicate'])->name('employee-contracts.duplicate');
+    Route::get('employee-contracts-statistics', [EmployeeContractController::class, 'statistics'])->name('employee-contracts.statistics');
+    Route::get('employee-contracts/{id}/export-report', [EmployeeContractController::class, 'exportReport'])->name('employee-contracts.export-report');
+    Route::get('available-employees', [EmployeeContractController::class, 'availableEmployees'])->name('employee-contracts.available-employees');
     
     // Role management routes (protected by permission middleware)
     Route::middleware(['permission:view_users'])->group(function () {

@@ -60,6 +60,21 @@ class EmployeeResource extends JsonResource
                     'type' => $this->employeeContract->type,
                 ];
             }),
+            'employee_shifts' => $this->whenLoaded('employeeShifts', function () {
+                return $this->employeeShifts->map(function ($employeeShift) {
+                    return [
+                        'id' => $employeeShift->id,
+                        'date' => $employeeShift->date,
+                        'notes' => $employeeShift->notes,
+                        'shift' => $employeeShift->shift ? [
+                            'id' => $employeeShift->shift->id,
+                            'name' => $employeeShift->shift->name,
+                            'start_time' => $employeeShift->shift->start_time,
+                            'end_time' => $employeeShift->shift->end_time,
+                        ] : null,
+                    ];
+                });
+            }),
             
             // Additional computed fields
             'age' => $this->birth_date ? $this->birth_date->age : null,

@@ -13,18 +13,14 @@
             </div>
             <h1 class="text-xl font-bold text-gray-900">SIGAP</h1>
           </div>
-          <button 
-            @click="toggleSidebar"
-            class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-          >
+          <button @click="toggleSidebar"
+            class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center">
             <i class="pi pi-angle-left text-gray-500 text-sm"></i>
           </button>
         </div>
         <div v-else class="flex justify-center w-full">
-          <button 
-            @click="toggleSidebar"
-            class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-          >
+          <button @click="toggleSidebar"
+            class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center">
             <i class="pi pi-angle-right text-gray-500 text-sm"></i>
           </button>
         </div>
@@ -34,13 +30,8 @@
       <nav class="flex-1 overflow-y-auto">
         <div class="p-2 space-y-1">
           <!-- Dashboard (Always visible) -->
-          <NavItem 
-            href="/dashboard"
-            :active="$page.url === '/dashboard'"
-            :collapsed="!isOpen"
-            icon="pi pi-home"
-            label="Dashboard"
-          />
+          <NavItem href="/dashboard" :active="$page.url === '/dashboard'" :collapsed="!isOpen" icon="pi pi-home"
+            label="Dashboard" />
 
           <!-- Menu Groups -->
           <template v-for="group in menuGroups" :key="group.name">
@@ -57,16 +48,8 @@
 
               <!-- Group Items -->
               <div class="space-y-1">
-                <NavItem 
-                  v-for="item in group.items"
-                  v-show="item.show"
-                  :key="item.href"
-                  :href="item.href"
-                  :active="item.active"
-                  :collapsed="!isOpen"
-                  :icon="item.icon"
-                  :label="item.label"
-                />
+                <NavItem v-for="item in group.items" v-show="item.show" :key="item.href" :href="item.href"
+                  :active="item.active" :collapsed="!isOpen" :icon="item.icon" :label="item.label" />
               </div>
             </div>
           </template>
@@ -114,12 +97,12 @@ const page = usePage()
 const user = computed(() => page.props.auth?.user)
 
 // Use permission system
-const { 
-  canView, 
-  hasPermission, 
-  hasAnyPermission, 
-  isSuperAdmin, 
-  isAdmin 
+const {
+  canView,
+  hasPermission,
+  hasAnyPermission,
+  isSuperAdmin,
+  isAdmin
 } = usePermissions()
 
 // Permission checks for menu items - using exact permission names
@@ -131,10 +114,11 @@ const canAccessPresences = computed(() => hasPermission('view_presences') || isS
 const canAccessQuality = computed(() => hasPermission('view_quality') || isSuperAdmin.value)
 const canAccessPacks = computed(() => hasPermission('view_packs') || isSuperAdmin.value)
 const canAccessContracts = computed(() => hasPermission('view_contracts') || isSuperAdmin.value)
+const canAccessEmployeeContracts = computed(() => hasPermission('view_employee_contracts') || isSuperAdmin.value)
 const canAccessUsers = computed(() => hasPermission('view_users') || isSuperAdmin.value)
 const canAccessRoles = computed(() => hasPermission('view_users') || isSuperAdmin.value) // Role management requires user permissions
 const canAccessReports = computed(() => hasPermission('view_reports') || isSuperAdmin.value)
-const canAccessSettings = computed(() => 
+const canAccessSettings = computed(() =>
   hasAnyPermission(['system_settings', 'audit_logs', 'backup_restore']) || isSuperAdmin.value
 )
 
@@ -149,6 +133,13 @@ const menuGroups = computed(() => [
         icon: 'pi pi-users',
         label: 'Employees',
         show: canAccessEmployees.value
+      },
+      {
+        href: '/employee-contracts',
+        active: page.url.startsWith('/employee-contracts'),
+        icon: 'pi pi-file-edit',
+        label: 'Employee Contracts',
+        show: canAccessEmployeeContracts.value
       },
       {
         href: '/shifts',
@@ -183,6 +174,7 @@ const menuGroups = computed(() => [
         label: 'Locations',
         show: canAccessLocations.value
       },
+
       {
         href: '/packs',
         active: page.url.startsWith('/packs'),
@@ -190,13 +182,7 @@ const menuGroups = computed(() => [
         label: 'Packs',
         show: canAccessPacks.value
       },
-      {
-        href: '/contracts',
-        active: page.url.startsWith('/contracts'),
-        icon: 'pi pi-file-text',
-        label: 'Contracts',
-        show: canAccessContracts.value
-      }
+
     ]
   },
   {

@@ -17,7 +17,7 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Employee::with(['location', 'pkwt', 'employeeContract']);
+        $query = Employee::with(['location', 'pkwt', 'employeeContract', 'employeeShifts.shift']);
 
         // Global search across all fields
         if ($request->filled('search')) {
@@ -53,6 +53,7 @@ class EmployeeController extends Controller
         $data = [
             'employees' => EmployeeResource::collection($employees),
             'locations' => Location::where('is_active', true)->get(['id', 'name']),
+            'contracts' => EmployeeContract::where('is_active', true)->get(['id', 'name']),
             'filters' => $request->only(['search', 'status', 'location_id', 'department']),
         ];
 
@@ -73,7 +74,7 @@ class EmployeeController extends Controller
      */
     public function search(Request $request)
     {
-        $query = Employee::with(['location', 'pkwt', 'employeeContract']);
+        $query = Employee::with(['location', 'pkwt', 'employeeContract', 'employeeShifts.shift']);
 
         if ($request->filled('q')) {
             $search = $request->input('q');
@@ -171,7 +172,7 @@ class EmployeeController extends Controller
      */
     public function show(Request $request, Employee $employee)
     {
-        $employee->load(['location', 'pkwt', 'employeeContract', 'presences' => function($query) {
+        $employee->load(['location', 'pkwt', 'employeeContract', 'employeeShifts.shift', 'presences' => function($query) {
             $query->latest()->limit(10);
         }]);
 
@@ -185,7 +186,7 @@ class EmployeeController extends Controller
 
         // For Inertia show page, send the employee data directly (not wrapped in Resource)
         return Inertia::render('Employees/Show', [
-            'employee' => $employee->load(['location', 'pkwt', 'employeeContract']),
+            'employee' => $employee->load(['location', 'pkwt', 'employeeContract', 'employeeShifts.shift']),
         ]);
     }
 

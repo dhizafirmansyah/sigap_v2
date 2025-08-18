@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Carbon\Carbon;
 
 class Shift extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'name',
         'start_time',
@@ -23,10 +25,16 @@ class Shift extends Model
     ];
 
     // Relationships
-    public function users(): BelongsToMany
+    public function employees(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'user_shifts')
+        return $this->belongsToMany(Employee::class, 'employee_shifts')
+                    ->withPivot(['date', 'notes'])
                     ->withTimestamps();
+    }
+
+    public function presences()
+    {
+        return $this->hasMany(Presence::class);
     }
 
     // Accessors
@@ -52,6 +60,19 @@ class Shift extends Model
         
         $duration = $start->diffInHours($end);
         return $duration . ' hours';
+    }
+
+    public function getDurationInHours(): float
+    {
+        $start = Carbon::parse($this->start_time);
+        $end = Carbon::parse($this->end_time);
+        
+        // Handle overnight shifts
+        if ($end->lessThan($start)) {
+            $end->addDay();
+        }
+        
+        return $start->diffInHours($end, true);
     }
 
     public function getShiftTypeAttribute(): string

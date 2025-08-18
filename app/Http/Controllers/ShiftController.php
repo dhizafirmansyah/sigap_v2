@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shift;
-use App\Models\User;
+use App\Models\Employee;
 use App\Services\ShiftService;
 use App\Traits\HasPermissions;
 use Illuminate\Http\Request;
@@ -54,11 +54,11 @@ class ShiftController extends Controller
         $this->authorizePermission('view_shifts');
 
         $shiftDetails = $this->shiftService->getShiftDetails($shift);
-        $availableUsers = $this->shiftService->getAvailableUsers($shift);
+        $availableEmployees = $this->shiftService->getAvailableEmployees($shift, now()->format('Y-m-d'));
 
         return Inertia::render('Shift/ShiftDetail', [
             'shift' => $shiftDetails,
-            'availableUsers' => $availableUsers
+            'availableEmployees' => $availableEmployees
         ]);
     }
 
@@ -165,65 +165,66 @@ class ShiftController extends Controller
     }
 
     /**
-     * Assign users to shift
+     * Assign employees to shift
      */
-    public function assignUsers(Request $request, Shift $shift): RedirectResponse
+    public function assignEmployees(Request $request, Shift $shift): RedirectResponse
     {
         $this->authorizePermission('assign_shift_users');
 
         $validated = $request->validate([
-            'user_ids' => 'required|array|min:1',
-            'user_ids.*' => 'exists:users,id',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'exists:employees,id',
+            'date' => 'required|date',
             'notes' => 'nullable|string|max:500',
         ]);
 
         try {
             // Check for shift conflicts
-            foreach ($validated['user_ids'] as $userId) {
+            foreach ($validated['employee_ids'] as $employeeId) {
                 $conflicts = $this->shiftService->getShiftConflicts(
-                    $userId,
-                    $shift->start_time,
-                    $shift->end_time,
+                    $employeeId,
+                    $validated['date'],
                     $shift->id
                 );
 
                 if ($conflicts->isNotEmpty()) {
-                    $user = User::find($userId);
+                    $employee = Employee::find($employeeId);
                     $conflictNames = $conflicts->pluck('name')->join(', ');
                     return redirect()->back()->withErrors([
-                        'error' => "User {$user->name} has conflicting shifts: {$conflictNames}"
+                        'error' => "Employee {$employee->name} has conflicting shifts on this date: {$conflictNames}"
                     ]);
                 }
             }
 
-            $this->shiftService->assignUsersToShift($shift, $validated['user_ids'], [
-                'start_date' => $validated['start_date'],
-                'end_date' => $validated['end_date'] ?? null,
+            $this->shiftService->assignEmployeesToShift($shift, $validated['employee_ids'], [
+                'date' => $validated['date'],
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            $userCount = count($validated['user_ids']);
+            $employeeCount = count($validated['employee_ids']);
             return redirect()->route('shifts.show', $shift)->with('success', 
-                "{$userCount} user(s) assigned to shift successfully!");
+                "{$employeeCount} employee(s) assigned to shift successfully!");
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
     }
 
     /**
-     * Remove user from shift
+     * Remove employee from shift
      */
-    public function removeUser(Request $request, Shift $shift, User $user): RedirectResponse
+    public function removeEmployee(Request $request, Shift $shift, Employee $employee): RedirectResponse
     {
         $this->authorizePermission('assign_shift_users');
 
+        $validated = $request->validate([
+            'date' => 'required|date'
+        ]);
+
         try {
-            $this->shiftService->removeUserFromShift($shift, $user);
+            $this->shiftService->removeEmployeeFromShift($shift, $employee, $validated['date']);
 
             return redirect()->route('shifts.show', $shift)->with('success', 
-                'User removed from shift successfully!');
+                'Employee removed from shift successfully!');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
@@ -248,38 +249,39 @@ class ShiftController extends Controller
     }
 
     /**
-     * Get available users for shift assignment
+     * Get available employees for shift assignment
      */
-    public function availableUsers(Shift $shift)
+    public function availableEmployees(Request $request, Shift $shift)
     {
-        $users = $this->shiftService->getAvailableUsers($shift);
-        return response()->json($users);
+        $date = $request->get('date', now()->format('Y-m-d'));
+        $employees = $this->shiftService->getAvailableEmployees($shift, $date);
+        return response()->json($employees);
     }
 
     /**
-     * Check shift conflicts for user
+     * Check shift conflicts for employee
      */
     public function checkConflicts(Request $request, Shift $shift)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:employees,id',
+            'date' => 'required|date',
         ]);
 
         $conflicts = $this->shiftService->getShiftConflicts(
-            $validated['user_id'],
-            $shift->start_time,
-            $shift->end_time,
+            $validated['employee_id'],
+            $validated['date'],
             $shift->id
         );
 
         return response()->json([
             'has_conflicts' => $conflicts->isNotEmpty(),
-            'conflicts' => $conflicts->map(function ($conflictShift) {
+            'conflicts' => $conflicts->map(function ($conflict) {
                 return [
-                    'id' => $conflictShift->id,
-                    'name' => $conflictShift->name,
-                    'start_time' => $conflictShift->formatted_start_time,
-                    'end_time' => $conflictShift->formatted_end_time,
+                    'id' => $conflict->id,
+                    'name' => $conflict->name,
+                    'start_time' => $conflict->start_time,
+                    'end_time' => $conflict->end_time,
                 ];
             })
         ]);

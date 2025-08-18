@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Shift;
-use App\Models\User;
+use App\Models\Employee;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +16,7 @@ class ShiftService
      */
     public function getPaginatedShifts(array $filters = []): LengthAwarePaginator
     {
-        $query = Shift::query()->withCount('users');
+        $query = Shift::query()->withCount('employees');
 
         // Apply filters
         if (!empty($filters['search'])) {
@@ -46,8 +46,8 @@ class ShiftService
         $sortBy = $filters['sort_by'] ?? 'start_time';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         
-        if ($sortBy === 'users_count') {
-            $query->orderBy('users_count', $sortOrder);
+        if ($sortBy === 'employees_count') {
+            $query->orderBy('employees_count', $sortOrder);
         } else {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -69,9 +69,8 @@ class ShiftService
         $afternoonShifts = Shift::active()->byType('afternoon')->count();
         $nightShifts = Shift::active()->byType('night')->count();
         
-        $totalUsersWithShifts = DB::table('user_shifts')
-            ->where('is_active', true)
-            ->distinct('user_id')
+        $totalEmployeesWithShifts = DB::table('employee_shifts')
+            ->distinct('employee_id')
             ->count();
 
         return [
@@ -81,7 +80,7 @@ class ShiftService
             'morning_shifts' => $morningShifts,
             'afternoon_shifts' => $afternoonShifts,
             'night_shifts' => $nightShifts,
-            'users_with_shifts' => $totalUsersWithShifts,
+            'employees_with_shifts' => $totalEmployeesWithShifts,
         ];
     }
 
@@ -122,18 +121,17 @@ class ShiftService
     }
 
     /**
-     * Delete a shift (only if no active users assigned)
+     * Delete a shift (only if no active employees assigned)
      */
     public function deleteShift(Shift $shift): bool
     {
-        // Check if shift has active user assignments
-        $activeAssignments = DB::table('user_shifts')
+        // Check if shift has active employee assignments
+        $activeAssignments = DB::table('employee_shifts')
             ->where('shift_id', $shift->id)
-            ->where('is_active', true)
             ->count();
 
         if ($activeAssignments > 0) {
-            throw new \Exception('Cannot delete shift with active user assignments. Please remove all user assignments first.');
+            throw new \Exception('Cannot delete shift with active employee assignments. Please remove all employee assignments first.');
         }
 
         return $shift->delete();
@@ -173,103 +171,76 @@ class ShiftService
     }
 
     /**
-     * Get shift details with users
+     * Get shift details with employees
      */
     public function getShiftDetails(Shift $shift): Shift
     {
         return $shift->load([
-            'users' => function ($query) {
-                $query->withPivot(['start_date', 'end_date', 'is_active', 'notes'])
-                      ->orderBy('pivot_start_date', 'desc');
+            'employees' => function ($query) {
+                $query->withPivot(['date', 'notes'])
+                      ->orderBy('pivot_date', 'desc');
             }
         ]);
     }
 
     /**
-     * Assign users to shift
+     * Assign employees to shift
      */
-    public function assignUsersToShift(Shift $shift, array $userIds, array $assignmentData = []): void
+    public function assignEmployeesToShift(Shift $shift, array $employeeIds, array $assignmentData = []): void
     {
-        $startDate = $assignmentData['start_date'] ?? now()->format('Y-m-d');
-        $endDate = $assignmentData['end_date'] ?? null;
+        $date = $assignmentData['date'] ?? now()->format('Y-m-d');
         $notes = $assignmentData['notes'] ?? null;
 
         $syncData = [];
-        foreach ($userIds as $userId) {
-            $syncData[$userId] = [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'is_active' => true,
+        foreach ($employeeIds as $employeeId) {
+            $syncData[$employeeId] = [
+                'date' => $date,
                 'notes' => $notes,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         }
 
-        $shift->users()->syncWithoutDetaching($syncData);
+        $shift->employees()->syncWithoutDetaching($syncData);
     }
 
     /**
-     * Remove user from shift
+     * Remove employee from shift
      */
-    public function removeUserFromShift(Shift $shift, User $user): void
+    public function removeEmployeeFromShift(Shift $shift, Employee $employee, string $date): void
     {
-        $shift->users()->updateExistingPivot($user->id, [
-            'is_active' => false,
-            'end_date' => now()->format('Y-m-d'),
-            'updated_at' => now(),
-        ]);
+        $shift->employees()->wherePivot('date', $date)->detach($employee->id);
     }
 
     /**
-     * Get users available for shift assignment
+     * Get employees available for shift assignment
      */
-    public function getAvailableUsers(Shift $shift): Collection
+    public function getAvailableEmployees(Shift $shift, string $date): Collection
     {
-        $assignedUserIds = DB::table('user_shifts')
+        $assignedEmployeeIds = DB::table('employee_shifts')
             ->where('shift_id', $shift->id)
-            ->where('is_active', true)
-            ->pluck('user_id');
+            ->where('date', $date)
+            ->pluck('employee_id');
 
-        return User::whereNotIn('id', $assignedUserIds)
-            ->where('is_active', true)
+        return Employee::whereNotIn('id', $assignedEmployeeIds)
+            ->where('status', 'active')
             ->orderBy('name')
             ->get();
     }
 
     /**
-     * Get shift conflicts for user
+     * Get shift conflicts for employee
      */
-    public function getShiftConflicts(int $userId, string $startTime, string $endTime, ?int $excludeShiftId = null): Collection
+    public function getShiftConflicts(int $employeeId, string $date, ?int $excludeShiftId = null): Collection
     {
-        $userShiftIds = DB::table('user_shifts')
-            ->where('user_id', $userId)
-            ->where('is_active', true)
-            ->pluck('shift_id');
-
-        $query = Shift::whereIn('id', $userShiftIds)
-            ->where('is_active', true);
+        $query = Shift::whereHas('employees', function($q) use ($employeeId, $date) {
+            $q->where('employees.id', $employeeId)
+              ->where('employee_shifts.date', $date);
+        })->where('is_active', true);
 
         if ($excludeShiftId) {
             $query->where('id', '!=', $excludeShiftId);
         }
-
-        // Check for time conflicts
-        $query->where(function ($q) use ($startTime, $endTime) {
-            $q->where(function ($subQ) use ($startTime, $endTime) {
-                // New shift starts during existing shift
-                $subQ->whereTime('start_time', '<=', $startTime)
-                     ->whereTime('end_time', '>', $startTime);
-            })->orWhere(function ($subQ) use ($startTime, $endTime) {
-                // New shift ends during existing shift
-                $subQ->whereTime('start_time', '<', $endTime)
-                     ->whereTime('end_time', '>=', $endTime);
-            })->orWhere(function ($subQ) use ($startTime, $endTime) {
-                // New shift encompasses existing shift
-                $subQ->whereTime('start_time', '>=', $startTime)
-                     ->whereTime('end_time', '<=', $endTime);
-            });
-        });
 
         return $query->get();
     }
@@ -298,13 +269,9 @@ class ShiftService
     public function getShiftSchedule(string $startDate, string $endDate): array
     {
         $shifts = Shift::active()
-            ->with(['users' => function ($query) use ($startDate, $endDate) {
-                $query->wherePivot('is_active', true)
-                      ->wherePivot('start_date', '<=', $endDate)
-                      ->where(function ($q) use ($startDate) {
-                          $q->wherePivot('end_date', '>=', $startDate)
-                            ->orWherePivot('end_date', null);
-                      });
+            ->with(['employees' => function ($query) use ($startDate, $endDate) {
+                $query->wherePivot('date', '>=', $startDate)
+                      ->wherePivot('date', '<=', $endDate);
             }])
             ->orderBy('start_time')
             ->get();
@@ -317,14 +284,13 @@ class ShiftService
                 'end_time' => $shift->formatted_end_time,
                 'duration' => $shift->duration,
                 'type' => $shift->shift_type,
-                'users' => $shift->users->map(function ($user) {
+                'employees' => $shift->employees->map(function ($employee) {
                     return [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'start_date' => $user->pivot->start_date,
-                        'end_date' => $user->pivot->end_date,
-                        'notes' => $user->pivot->notes,
+                        'id' => $employee->id,
+                        'name' => $employee->name,
+                        'email' => $employee->email,
+                        'date' => $employee->pivot->date,
+                        'notes' => $employee->pivot->notes,
                     ];
                 }),
             ];

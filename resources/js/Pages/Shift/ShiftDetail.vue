@@ -75,7 +75,7 @@
           <label class="block text-sm font-medium text-gray-500 mb-2">Total Employees</label>
           <div class="flex items-center text-lg font-medium text-gray-900">
             <i class="pi pi-users mr-2 text-blue-500"></i>
-            {{ shift.users?.length || 0 }}
+            {{ shift.employees?.length || 0 }}
           </div>
         </div>
       </div>
@@ -221,8 +221,8 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Select Employees</label>
           <MultiSelect
-            v-model="assignForm.user_ids"
-            :options="availableUsers"
+            v-model="assignForm.employee_ids"
+            :options="availableEmployees"
             optionLabel="name"
             optionValue="id"
             placeholder="Choose employees"
@@ -387,7 +387,7 @@ import Dropdown from 'primevue/dropdown'
 // Props
 const props = defineProps({
   shift: Object,
-  availableUsers: Array
+  availableEmployees: Array
 })
 
 // Permissions
@@ -404,7 +404,7 @@ const filterStatus = ref(null)
 
 // Forms
 const assignForm = reactive({
-  user_ids: [],
+  employee_ids: [],
   start_date: new Date(),
   end_date: null,
   notes: ''
@@ -426,7 +426,7 @@ const assignmentStatusOptions = [
 
 // Computed
 const filteredEmployees = computed(() => {
-  let employees = props.shift.users || []
+  let employees = props.shift.employees || []
   
   // Filter by search
   if (searchEmployee.value) {
@@ -520,13 +520,13 @@ const assignEmployees = async () => {
   
   try {
     const formData = {
-      user_ids: assignForm.user_ids,
+      employee_ids: assignForm.employee_ids,
       start_date: format(assignForm.start_date, 'yyyy-MM-dd'),
       end_date: assignForm.end_date ? format(assignForm.end_date, 'yyyy-MM-dd') : null,
       notes: assignForm.notes
     }
     
-    await router.post(route('shifts.assign-users', props.shift.id), formData, {
+    await router.post(route('shifts.assign-employees', props.shift.id), formData, {
       onSuccess: () => {
         showAssignModal.value = false
         Object.assign(assignForm, {
@@ -585,9 +585,9 @@ const updateAssignment = async () => {
 const removeEmployee = async (employee) => {
   if (confirm(`Are you sure you want to remove ${employee.name} from this shift?`)) {
     try {
-      await router.delete(route('shifts.remove-user', {
+      await router.delete(route('shifts.remove-employee', {
         shift: props.shift.id,
-        user: employee.id
+        employee: employee.id
       }))
     } catch (error) {
       console.error('Failed to remove employee:', error)

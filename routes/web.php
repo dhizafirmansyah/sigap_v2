@@ -7,6 +7,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\PresenceController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -60,11 +61,18 @@ Route::middleware('auth')->group(function () {
     Route::resource('shifts', ShiftController::class);
     Route::post('shifts/{shift}/duplicate', [ShiftController::class, 'duplicate'])->name('shifts.duplicate');
     Route::patch('shifts/{shift}/toggle-status', [ShiftController::class, 'toggleStatus'])->name('shifts.toggle-status');
-    Route::post('shifts/{shift}/assign-users', [ShiftController::class, 'assignUsers'])->name('shifts.assign-users');
-    Route::delete('shifts/{shift}/remove-user/{user}', [ShiftController::class, 'removeUser'])->name('shifts.remove-user');
-    Route::get('shifts/{shift}/available-users', [ShiftController::class, 'availableUsers'])->name('shifts.available-users');
+    Route::post('shifts/{shift}/assign-employees', [ShiftController::class, 'assignEmployees'])->name('shifts.assign-employees');
+    Route::delete('shifts/{shift}/remove-employee/{employee}', [ShiftController::class, 'removeEmployee'])->name('shifts.remove-employee');
+    Route::get('shifts/{shift}/available-employees', [ShiftController::class, 'availableEmployees'])->name('shifts.available-employees');
     Route::post('shifts/{shift}/check-conflicts', [ShiftController::class, 'checkConflicts'])->name('shifts.check-conflicts');
     Route::get('shift-schedule', [ShiftController::class, 'schedule'])->name('shifts.schedule');
+    
+    // Presence management routes
+    Route::resource('presences', PresenceController::class);
+    Route::post('presences/check-in', [PresenceController::class, 'checkIn'])->name('presences.check-in');
+    Route::post('presences/{presence}/check-out', [PresenceController::class, 'checkOut'])->name('presences.check-out');
+    Route::get('presences/reports/daily', [PresenceController::class, 'dailyReport'])->name('presences.daily-report');
+    Route::get('presences/reports/monthly', [PresenceController::class, 'monthlyReport'])->name('presences.monthly-report');
     
     // Role management routes (protected by permission middleware)
     Route::middleware(['permission:view_users'])->group(function () {

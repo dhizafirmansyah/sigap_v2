@@ -64,8 +64,8 @@
             <i class="pi pi-users text-2xl text-indigo-600"></i>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Users with Shifts</p>
-            <p class="text-2xl font-bold text-gray-900">{{ statistics.users_with_shifts }}</p>
+            <p class="text-sm font-medium text-gray-500">Employees with Shifts</p>
+            <p class="text-2xl font-bold text-gray-900">{{ statistics.employees_with_shifts }}</p>
           </div>
         </div>
       </div>
@@ -160,11 +160,11 @@
           </template>
         </Column>
         
-        <Column field="users_count" header="Employees" sortable>
+        <Column field="employees_count" header="Employees" sortable>
           <template #body="{ data }">
             <div class="flex items-center">
               <i class="pi pi-users text-blue-500 mr-1"></i>
-              <span class="font-medium">{{ data.users_count }}</span>
+              <span class="font-medium">{{ data.employees_count }}</span>
             </div>
           </template>
         </Column>
@@ -220,7 +220,7 @@
                 <i :class="data.is_active ? 'pi pi-times' : 'pi pi-check'"></i>
               </Button>
               <Button
-                v-if="canDelete('shifts') && data.users_count === 0"
+                v-if="canDelete('shifts') && data.employees_count === 0"
                 @click="deleteShift(data)"
                 size="small"
                 outlined

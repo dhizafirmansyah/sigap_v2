@@ -2,7 +2,7 @@
     <Head title="Edit Location" />
 
     <AppLayout 
-        :title="`Edit Location: ${location.name}`" 
+        :title="`Edit Location: ${location?.name || 'Loading...'}`" 
         subtitle="Update location information and geographic data"
         :user="page.props.auth?.user"
     >
@@ -14,6 +14,7 @@
                     severity="info"
                     outlined
                     @click="router.visit(`/locations/${locationId}`)"
+                    :disabled="!locationId"
                 />
                 <Button 
                     icon="pi pi-arrow-left"
@@ -214,13 +215,13 @@
                                 </h3>
                                 <div class="grid grid-cols-3 gap-4 text-sm text-gray-600">
                                     <div>
-                                        <span class="font-medium">Employees:</span> {{ location.employees_count || 0 }}
+                                        <span class="font-medium">Employees:</span> {{ location?.employees_count || 0 }}
                                     </div>
                                     <div>
-                                        <span class="font-medium">Packs:</span> {{ location.packs_count || 0 }}
+                                        <span class="font-medium">Packs:</span> {{ location?.packs_count || 0 }}
                                     </div>
                                     <div>
-                                        <span class="font-medium">Kemas:</span> {{ location.kemas_count || 0 }}
+                                        <span class="font-medium">Kemas:</span> {{ location?.kemas_count || 0 }}
                                     </div>
                                 </div>
                             </div>
@@ -251,11 +252,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Head, router, usePage, useForm } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { locationApi } from '@/utils/api';
 
 // PrimeVue Components
 import InputText from 'primevue/inputtext';
@@ -267,70 +267,72 @@ import Checkbox from 'primevue/checkbox';
 const page = usePage()
 const toast = useToast()
 
-// Get location ID from props or URL path
-const locationId = props.location?.id || (() => {
-    const pathSegments = window.location.pathname.split('/');
-    const editIndex = pathSegments.findIndex(segment => segment === 'edit');
-    return editIndex > 0 ? pathSegments[editIndex - 1] : null;
-})()
-
-// Props
+// Props - make it more flexible
 const props = defineProps({
-    location: {
-        type: Object,
-        required: true
-    }
+    location: Object
 });
 
 // Reactive data
-const loading = ref(false);
-const location = ref(props.location);
+const loading = ref(true);
+const location = ref(null);
+const locationId = ref(null);
 
 const form = useForm({
-    name: props.location?.name || '',
-    code: props.location?.code || '',
-    latitude: props.location?.latitude || null,
-    longitude: props.location?.longitude || null,
-    radius: props.location?.radius || null,
-    address: props.location?.address || '',
-    description: props.location?.description || '',
-    is_active: props.location?.is_active ?? true
+    name: '',
+    code: '',
+    latitude: null,
+    longitude: null,
+    radius: null,
+    address: '',
+    description: '',
+    is_active: true
 });
 
-// Methods
-const fetchLocation = async () => {
-    try {
-        loading.value = true;
-        console.log('Fetching location with ID:', locationId);
-        const response = await locationApi.getLocation(locationId);
-        location.value = response.data;
-        
-        // Update form with fresh data
-        form.name = response.data.name || '';
-        form.code = response.data.code || '';
-        form.latitude = response.data.latitude || null;
-        form.longitude = response.data.longitude || null;
-        form.radius = response.data.radius || null;
-        form.address = response.data.address || '';
-        form.description = response.data.description || '';
-        form.is_active = response.data.is_active ?? true;
-        
-    } catch (error) {
-        console.error('Error fetching location:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to load location data',
-            life: 3000
-        });
-    } finally {
+// Update form with location data - define this BEFORE the watch
+const updateFormWithLocationData = (locationData) => {
+    if (!locationData) {
+        console.warn('No location data provided to updateFormWithLocationData');
+        return;
+    }
+    
+    form.name = locationData.name || ''
+    form.code = locationData.code || ''
+    form.latitude = locationData.latitude || null
+    form.longitude = locationData.longitude || null
+    form.radius = locationData.radius || null
+    form.address = locationData.address || ''
+    form.description = locationData.description || ''
+    form.is_active = locationData.is_active !== undefined ? locationData.is_active : true
+}
+
+// Watch for props changes
+watch(() => props.location, (newLocation) => {
+    // Handle both direct data and nested data structures
+    let actualLocation = null;
+    if (newLocation?.data) {
+        // Data is nested in a 'data' property (like from Resource)
+        actualLocation = newLocation.data;
+    } else if (newLocation?.id) {
+        // Data is direct
+        actualLocation = newLocation;
+    }
+    
+    if (actualLocation?.id) {
+        location.value = actualLocation;
+        locationId.value = actualLocation.id;
+        updateFormWithLocationData(actualLocation);
         loading.value = false;
     }
-};
+}, { immediate: true });
 
-
+// Methods
 const submitForm = () => {
-    form.put(`/locations/${locationId}`, {
+    if (!locationId.value) {
+        console.error('No location ID available for update');
+        return;
+    }
+    
+    form.put(`/locations/${locationId.value}`, {
         onSuccess: () => {
             toast.add({
                 severity: 'success',
@@ -352,10 +354,34 @@ const submitForm = () => {
 
 // Lifecycle
 onMounted(() => {
-    // Form is already populated from props
-    // Only fetch if we want to ensure fresh data
-    if (!props.location || !props.location.id) {
-        fetchLocation();
+    // Try to get location data from multiple sources
+    let actualLocation = null;
+    
+    // First try props.location.data (Resource structure)
+    if (props.location?.data?.id) {
+        actualLocation = props.location.data;
+    }
+    // Then try props.location directly
+    else if (props.location?.id) {
+        actualLocation = props.location;
+    }
+    // Finally try page.props.location
+    else if (page.props?.location?.id) {
+        actualLocation = page.props.location;
+    }
+    // Try page.props.location.data as well
+    else if (page.props?.location?.data?.id) {
+        actualLocation = page.props.location.data;
+    }
+    
+    if (actualLocation?.id) {
+        location.value = actualLocation;
+        locationId.value = actualLocation.id;
+        updateFormWithLocationData(actualLocation);
+        loading.value = false;
+    } else {
+        console.error('No location data found in props or page.props');
+        loading.value = false;
     }
 });
 </script>

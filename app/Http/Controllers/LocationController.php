@@ -150,6 +150,8 @@ class LocationController extends Controller
      */
     public function edit(Location $location)
     {
+        $location->loadCount(['employees', 'packs', 'kemas']);
+        
         return Inertia::render('Locations/Edit', [
             'location' => new LocationResource($location),
         ]);

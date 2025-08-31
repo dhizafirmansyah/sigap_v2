@@ -1,8 +1,8 @@
 <template>
-    <Head :title="`Location: ${location.name}`" />
+    <Head :title="`Location: ${location?.name || 'Loading...'}`" />
 
     <AppLayout 
-        :title="`Location: ${location.name}`" 
+        :title="`Location: ${location?.name || 'Loading...'}`" 
         subtitle="View detailed location information and usage statistics"
         :user="page.props.auth?.user"
     >
@@ -14,6 +14,7 @@
                     severity="warning"
                     outlined
                     @click="router.visit(`/locations/${locationId}/edit`)"
+                    :disabled="!locationId"
                 />
                 <Button 
                     icon="pi pi-arrow-left"
@@ -44,25 +45,25 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Name</label>
-                                <p class="text-base text-gray-900">{{ location.name }}</p>
+                                <p class="text-base text-gray-900">{{ location?.name }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Code</label>
-                                <p class="text-base text-gray-900">{{ location.code }}</p>
+                                <p class="text-base text-gray-900">{{ location?.code }}</p>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Address</label>
-                                <p class="text-base text-gray-900">{{ location.address || '-' }}</p>
+                                <p class="text-base text-gray-900">{{ location?.address || '-' }}</p>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Description</label>
-                                <p class="text-base text-gray-900">{{ location.description || '-' }}</p>
+                                <p class="text-base text-gray-900">{{ location?.description || '-' }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
                                 <Tag
-                                    :value="location.is_active ? 'Active' : 'Inactive'"
-                                    :severity="location.is_active ? 'success' : 'danger'"
+                                    :value="location?.is_active ? 'Active' : 'Inactive'"
+                                    :severity="location?.is_active ? 'success' : 'danger'"
                                 />
                             </div>
                         </div>
@@ -77,25 +78,25 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Latitude</label>
                                 <p class="text-base text-gray-900">
-                                    {{ location.latitude ? parseFloat(location.latitude).toFixed(6) : '-' }}
+                                    {{ location?.latitude ? parseFloat(location.latitude).toFixed(6) : '-' }}
                                 </p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Longitude</label>
                                 <p class="text-base text-gray-900">
-                                    {{ location.longitude ? parseFloat(location.longitude).toFixed(6) : '-' }}
+                                    {{ location?.longitude ? parseFloat(location.longitude).toFixed(6) : '-' }}
                                 </p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Radius</label>
                                 <p class="text-base text-gray-900">
-                                    {{ location.radius ? `${location.radius} meters` : '-' }}
+                                    {{ location?.radius ? `${location.radius} meters` : '-' }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Map Link -->
-                        <div v-if="location.latitude && location.longitude" class="mt-6">
+                        <div v-if="location?.latitude && location?.longitude" class="mt-6">
                             <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
                                 <div class="flex items-start">
                                     <div class="flex-shrink-0">
@@ -106,17 +107,17 @@
                                             Map Location
                                         </h4>
                                         <div class="mt-2 text-sm text-blue-700">
-                                            <p>Coordinates: {{ location.latitude }}, {{ location.longitude }}</p>
+                                            <p>Coordinates: {{ location?.latitude }}, {{ location?.longitude }}</p>
                                             <div class="mt-2 space-x-4">
                                                 <a 
-                                                    :href="`https://www.google.com/maps?q=${location.latitude},${location.longitude}`"
+                                                    :href="`https://www.google.com/maps?q=${location?.latitude},${location?.longitude}`"
                                                     target="_blank"
                                                     class="text-blue-600 hover:text-blue-800 underline"
                                                 >
                                                     View on Google Maps
                                                 </a>
                                                 <a 
-                                                    :href="`https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}&zoom=15`"
+                                                    :href="`https://www.openstreetmap.org/?mlat=${location?.latitude}&mlon=${location?.longitude}&zoom=15`"
                                                     target="_blank"
                                                     class="text-blue-600 hover:text-blue-800 underline"
                                                 >
@@ -143,7 +144,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm font-medium text-blue-600">Employees</p>
-                                        <p class="text-2xl font-bold text-blue-900">{{ location.employees_count || 0 }}</p>
+                                        <p class="text-2xl font-bold text-blue-900">{{ location?.employees_count || 0 }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -154,7 +155,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm font-medium text-green-600">Packs</p>
-                                        <p class="text-2xl font-bold text-green-900">{{ location.packs_count || 0 }}</p>
+                                        <p class="text-2xl font-bold text-green-900">{{ location?.packs_count || 0 }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -165,7 +166,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm font-medium text-purple-600">Kemas</p>
-                                        <p class="text-2xl font-bold text-purple-900">{{ location.kemas_count || 0 }}</p>
+                                        <p class="text-2xl font-bold text-purple-900">{{ location?.kemas_count || 0 }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -180,11 +181,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Created At</label>
-                                <p class="text-base text-gray-900">{{ location.formatted_created_at || '-' }}</p>
+                                <p class="text-base text-gray-900">{{ location?.formatted_created_at || '-' }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Last Updated</label>
-                                <p class="text-base text-gray-900">{{ location.formatted_updated_at || '-' }}</p>
+                                <p class="text-base text-gray-900">{{ location?.formatted_updated_at || '-' }}</p>
                             </div>
                         </div>
                     </div>
@@ -200,13 +201,14 @@
                                 label="Edit Location"
                                 severity="warning"
                                 @click="router.visit(`/locations/${locationId}/edit`)"
+                                :disabled="!locationId"
                             />
                             <Button
                                 icon="pi pi-trash"
                                 label="Delete Location"
                                 severity="danger"
                                 @click="confirmDelete"
-                                :disabled="hasUsage"
+                                :disabled="hasUsage || !locationId"
                             />
                             <Button
                                 icon="pi pi-plus"
@@ -238,7 +240,7 @@
             <div class="confirmation-content">
                 <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
                 <span>
-                    Are you sure you want to delete <strong>{{ location.name }}</strong>?
+                    Are you sure you want to delete <strong>{{ location?.name }}</strong>?
                     This action cannot be undone.
                 </span>
             </div>
@@ -263,11 +265,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { locationApi } from '@/utils/api';
 
 // PrimeVue Components
 import Tag from 'primevue/tag';
@@ -277,47 +278,36 @@ import Dialog from 'primevue/dialog';
 const page = usePage()
 const toast = useToast()
 
-// Get location ID from props or URL path  
-const locationId = props.location?.id || (() => {
-    const pathSegments = window.location.pathname.split('/');
-    // For show route: /locations/{id}
-    const locationsIndex = pathSegments.findIndex(segment => segment === 'locations');
-    return locationsIndex >= 0 && pathSegments[locationsIndex + 1] ? pathSegments[locationsIndex + 1] : null;
-})()
-
-// Props
+// Props - make it more flexible
 const props = defineProps({
-    location: {
-        type: Object,
-        required: true
-    }
+    location: Object
 });
 
 // Reactive data
 const showDeleteDialog = ref(false);
 const deleting = ref(false);
-const loading = ref(false);
-const location = ref(props.location);
+const loading = ref(true);
+const location = ref(null);
+const locationId = ref(null);
 
-// Methods
-const fetchLocation = async () => {
-    try {
-        loading.value = true;
-        console.log('Fetching location with ID:', locationId);
-        const response = await locationApi.getLocation(locationId);
-        location.value = response.data;
-    } catch (error) {
-        console.error('Error fetching location:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to load location data',
-            life: 3000
-        });
-    } finally {
+// Watch for props changes
+watch(() => props.location, (newLocation) => {
+    // Handle both direct data and nested data structures
+    let actualLocation = null;
+    if (newLocation?.data) {
+        // Data is nested in a 'data' property (like from Resource)
+        actualLocation = newLocation.data;
+    } else if (newLocation?.id) {
+        // Data is direct
+        actualLocation = newLocation;
+    }
+    
+    if (actualLocation?.id) {
+        location.value = actualLocation;
+        locationId.value = actualLocation.id;
         loading.value = false;
     }
-};
+}, { immediate: true });
 
 // Computed
 const hasUsage = computed(() => {
@@ -338,9 +328,14 @@ const confirmDelete = () => {
 };
 
 const deleteLocation = () => {
+    if (!locationId.value) {
+        console.error('No location ID available for deletion');
+        return;
+    }
+    
     deleting.value = true;
     
-    router.delete(`/locations/${locationId}`, {
+    router.delete(`/locations/${locationId.value}`, {
         onSuccess: () => {
             toast.add({
                 severity: 'success',
@@ -367,13 +362,33 @@ const deleteLocation = () => {
 
 // Lifecycle
 onMounted(() => {
-    // Initialize with props data if available
-    if (props.location && props.location.id) {
-        location.value = props.location;
+    // Try to get location data from multiple sources
+    let actualLocation = null;
+    
+    // First try props.location.data (Resource structure)
+    if (props.location?.data?.id) {
+        actualLocation = props.location.data;
+    }
+    // Then try props.location directly
+    else if (props.location?.id) {
+        actualLocation = props.location;
+    }
+    // Finally try page.props.location
+    else if (page.props?.location?.id) {
+        actualLocation = page.props.location;
+    }
+    // Try page.props.location.data as well
+    else if (page.props?.location?.data?.id) {
+        actualLocation = page.props.location.data;
+    }
+    
+    if (actualLocation?.id) {
+        location.value = actualLocation;
+        locationId.value = actualLocation.id;
         loading.value = false;
     } else {
-        // Fetch data if props not available
-        fetchLocation();
+        console.error('No location data found in props or page.props');
+        loading.value = false;
     }
 });
 </script>

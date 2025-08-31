@@ -197,8 +197,8 @@
                             type="submit"
                             label="Update Brand" 
                             icon="pi pi-save"
-                            :loading="processing"
-                            :disabled="processing"
+                            :loading="form.processing"
+                            :disabled="form.processing"
                         />
                     </div>
                 </form>
@@ -238,7 +238,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { Head, router, usePage, useForm } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { brandApi } from '@/utils/api'
 import AppLayout from '@/Layouts/AppLayout.vue'
@@ -309,8 +309,8 @@ const loadBrand = async (brandId) => {
     }
 }
 
-// Form data - initialize with empty values
-const form = reactive({
+// Form data - use Inertia useForm for CSRF handling
+const form = useForm({
     name: '',
     code: '',
     description: '',
@@ -333,7 +333,6 @@ const updateFormWithBrandData = (brandData) => {
     form.is_active = brandData.is_active !== undefined ? brandData.is_active : true
 }
 
-const processing = ref(false)
 const errors = ref({})
 
 // Quality standards management
@@ -348,51 +347,37 @@ const removeQualityStandard = (index) => {
     form.quality_standards.splice(index, 1)
 }
 
-// Submit form with API helper
-const submit = async () => {
-    if (processing.value) return
+// Submit form with Inertia (handles CSRF automatically)
+const submit = () => {
+    if (form.processing) return
     
-    processing.value = true
+    // Clear errors
     errors.value = {}
     
-    try {
-        const { data } = await brandApi.updateBrand(brand.value.id, form)
-        
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Brand data updated successfully',
-            life: 3000
-        })
-        
-        // Redirect to brand detail or list
-        setTimeout(() => {
-            window.location.href = `/brands/${brand.value.id}`
-        }, 1500)
-        
-    } catch (error) {
-        console.error('Submit error:', error)
-        
-        // Handle validation errors
-        if (error.status === 422 && error.data?.errors) {
-            errors.value = error.data.errors
+    form.put(`/brands/${brand.value.id}`, {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Brand updated successfully',
+                life: 3000
+            })
+            // Redirect to brand detail or list
+            router.visit(`/brands/${brand.value.id}`)
+        },
+        onError: (formErrors) => {
+            errors.value = formErrors
             toast.add({
                 severity: 'warn',
                 summary: 'Validation Error',
                 detail: 'Please check the form fields and try again',
                 life: 5000
             })
-        } else {
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: error.message || 'Failed to update brand data',
-                life: 3000
-            })
+        },
+        onFinish: () => {
+            // Form processing will be automatically handled by Inertia
         }
-    } finally {
-        processing.value = false
-    }
+    })
 }
 
 // Reload brand data

@@ -33,11 +33,11 @@
                                     <InputText
                                         id="name"
                                         v-model="form.name"
-                                        :class="{ 'p-invalid': errors.name }"
+                                        :class="{ 'p-invalid': form.errors.name }"
                                         placeholder="Enter location name"
                                         class="w-full"
                                     />
-                                    <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+                                    <small v-if="form.errors.name" class="p-error">{{ form.errors.name }}</small>
                                 </div>
 
                                 <!-- Code -->
@@ -48,11 +48,11 @@
                                     <InputText
                                         id="code"
                                         v-model="form.code"
-                                        :class="{ 'p-invalid': errors.code }"
+                                        :class="{ 'p-invalid': form.errors.code }"
                                         placeholder="Enter location code"
                                         class="w-full"
                                     />
-                                    <small v-if="errors.code" class="p-error">{{ errors.code }}</small>
+                                    <small v-if="form.errors.code" class="p-error">{{ form.errors.code }}</small>
                                 </div>
                             </div>
 
@@ -64,12 +64,12 @@
                                 <Textarea
                                     id="address"
                                     v-model="form.address"
-                                    :class="{ 'p-invalid': errors.address }"
+                                    :class="{ 'p-invalid': form.errors.address }"
                                     placeholder="Enter full address"
                                     rows="3"
                                     class="w-full"
                                 />
-                                <small v-if="errors.address" class="p-error">{{ errors.address }}</small>
+                                <small v-if="form.errors.address" class="p-error">{{ form.errors.address }}</small>
                             </div>
 
                             <!-- Coordinates & Radius -->
@@ -82,14 +82,14 @@
                                     <InputNumber
                                         id="latitude"
                                         v-model="form.latitude"
-                                        :class="{ 'p-invalid': errors.latitude }"
+                                        :class="{ 'p-invalid': form.errors.latitude }"
                                         placeholder="e.g., -6.200000"
                                         :min="-90"
                                         :max="90"
                                         :maxFractionDigits="6"
                                         class="w-full"
                                     />
-                                    <small v-if="errors.latitude" class="p-error">{{ errors.latitude }}</small>
+                                    <small v-if="form.errors.latitude" class="p-error">{{ form.errors.latitude }}</small>
                                 </div>
 
                                 <!-- Longitude -->
@@ -100,14 +100,14 @@
                                     <InputNumber
                                         id="longitude"
                                         v-model="form.longitude"
-                                        :class="{ 'p-invalid': errors.longitude }"
+                                        :class="{ 'p-invalid': form.errors.longitude }"
                                         placeholder="e.g., 106.816666"
                                         :min="-180"
                                         :max="180"
                                         :maxFractionDigits="6"
                                         class="w-full"
                                     />
-                                    <small v-if="errors.longitude" class="p-error">{{ errors.longitude }}</small>
+                                    <small v-if="form.errors.longitude" class="p-error">{{ form.errors.longitude }}</small>
                                 </div>
 
                                 <!-- Radius -->
@@ -118,13 +118,13 @@
                                     <InputNumber
                                         id="radius"
                                         v-model="form.radius"
-                                        :class="{ 'p-invalid': errors.radius }"
+                                        :class="{ 'p-invalid': form.errors.radius }"
                                         placeholder="e.g., 100"
                                         :min="0"
                                         suffix=" m"
                                         class="w-full"
                                     />
-                                    <small v-if="errors.radius" class="p-error">{{ errors.radius }}</small>
+                                    <small v-if="form.errors.radius" class="p-error">{{ form.errors.radius }}</small>
                                 </div>
                             </div>
 
@@ -136,12 +136,12 @@
                                 <Textarea
                                     id="description"
                                     v-model="form.description"
-                                    :class="{ 'p-invalid': errors.description }"
+                                    :class="{ 'p-invalid': form.errors.description }"
                                     placeholder="Enter description (optional)"
                                     rows="4"
                                     class="w-full"
                                 />
-                                <small v-if="errors.description" class="p-error">{{ errors.description }}</small>
+                                <small v-if="form.errors.description" class="p-error">{{ form.errors.description }}</small>
                             </div>
 
                             <!-- Status -->
@@ -204,8 +204,8 @@
                                     type="submit"
                                     label="Save Location"
                                     icon="pi pi-check"
-                                    :loading="processing"
-                                    :disabled="processing"
+                                    :loading="form.processing"
+                                    :disabled="form.processing"
                                 />
                             </div>
                         </form>
@@ -217,8 +217,8 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { Head, router, usePage, useForm } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { locationApi } from '@/utils/api';
@@ -234,10 +234,7 @@ const page = usePage()
 const toast = useToast()
 
 // Reactive data
-const processing = ref(false);
-const errors = ref({});
-
-const form = reactive({
+const form = useForm({
     name: '',
     code: '',
     latitude: null,
@@ -249,44 +246,25 @@ const form = reactive({
 });
 
 // Methods
-const submitForm = async () => {
-    try {
-        processing.value = true;
-        errors.value = {};
-
-        const response = await locationApi.createLocation(form);
-        
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Location created successfully',
-            life: 3000
-        });
-
-        // Redirect to index
-        router.visit('/locations');
-        
-    } catch (error) {
-        if (error.response?.status === 422) {
-            errors.value = error.response.data.errors || {};
+const submitForm = () => {
+    form.post('/locations', {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Location created successfully',
+                life: 3000
+            });
+        },
+        onError: (errors) => {
             toast.add({
                 severity: 'error',
                 summary: 'Validation Error',
                 detail: 'Please check the form for errors',
                 life: 3000
             });
-        } else {
-            console.error('Error creating location:', error);
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to create location',
-                life: 3000
-            });
         }
-    } finally {
-        processing.value = false;
-    }
+    });
 };
 
 // Auto-generate code from name

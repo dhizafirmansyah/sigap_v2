@@ -105,8 +105,8 @@
                             placeholder="Search locations by name, code, address..."
                             class="w-full"
                             :loading="searchLoading"
-                            forceSelection="false"
-                            completeOnFocus="false"
+                            :forceSelection="false"
+                            :completeOnFocus="false"
                         />
                     </div>
                 </div>
@@ -142,7 +142,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="pi pi-compass mr-1"></i>Coordinates
                                 </label>
-                                <Dropdown
+                                <Select
                                     v-model="coordinateFilter"
                                     :options="coordinateOptions"
                                     optionLabel="label"
@@ -544,7 +544,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import AutoComplete from 'primevue/autocomplete'
-import Dropdown from 'primevue/dropdown'
+import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
 import { debounce } from 'lodash'
 
@@ -836,41 +836,31 @@ const deleteLocation = async () => {
     if (!locationToDelete.value) return
 
     deleting.value = true
-    try {
-        await locationApi.deleteLocation(locationToDelete.value.id)
-
-        // Remove from local data
-        const currentData = [...(originalLocations.value?.data || [])]
-        const updatedData = currentData.filter(loc => loc.id !== locationToDelete.value.id)
-        
-        // Update both original and filtered data
-        if (originalLocations.value) {
-            originalLocations.value.data = updatedData
+    
+    router.delete(`/locations/${locationToDelete.value.id}`, {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Location deleted successfully',
+                life: 3000
+            })
+            showDeleteDialog.value = false
+            locationToDelete.value = null
+        },
+        onError: (errors) => {
+            console.error('Delete error:', errors)
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to delete location',
+                life: 3000
+            })
+        },
+        onFinish: () => {
+            deleting.value = false
         }
-        
-        // Reapply filters to update filtered data
-        applyClientSideFilters()
-
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Location deleted successfully',
-            life: 3000
-        })
-        
-        showDeleteDialog.value = false
-        locationToDelete.value = null
-    } catch (error) {
-        console.error('Delete error:', error)
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.message || 'Failed to delete location',
-            life: 3000
-        })
-    } finally {
-        deleting.value = false
-    }
+    })
 }
 
 // Utility functions

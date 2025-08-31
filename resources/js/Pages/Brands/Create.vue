@@ -37,11 +37,11 @@
                                 <InputText
                                     id="name"
                                     v-model="form.name"
-                                    :class="{'border-red-500': errors.name}"
+                                    :class="{'border-red-500': form.errors.name}"
                                     placeholder="Enter brand name"
                                     class="w-full"
                                 />
-                                <small v-if="errors.name" class="text-red-500">{{ errors.name }}</small>
+                                <small v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</small>
                             </div>
 
                             <div>
@@ -51,11 +51,11 @@
                                 <InputText
                                     id="code"
                                     v-model="form.code"
-                                    :class="{'border-red-500': errors.code}"
+                                    :class="{'border-red-500': form.errors.code}"
                                     placeholder="e.g. BRD001"
                                     class="w-full"
                                 />
-                                <small v-if="errors.code" class="text-red-500">{{ errors.code }}</small>
+                                <small v-if="form.errors.code" class="text-red-500">{{ form.errors.code }}</small>
                                 <small class="text-gray-500">Code must be unique for each brand</small>
                             </div>
                         </div>
@@ -76,11 +76,11 @@
                                 <InputText
                                     id="category"
                                     v-model="form.category"
-                                    :class="{'border-red-500': errors.category}"
+                                    :class="{'border-red-500': form.errors.category}"
                                     placeholder="Brand category"
                                     class="w-full"
                                 />
-                                <small v-if="errors.category" class="text-red-500">{{ errors.category }}</small>
+                                <small v-if="form.errors.category" class="text-red-500">{{ form.errors.category }}</small>
                             </div>
 
                             <div>
@@ -90,13 +90,13 @@
                                 <InputNumber
                                     id="target_production_per_day"
                                     v-model="form.target_production_per_day"
-                                    :class="{'border-red-500': errors.target_production_per_day}"
+                                    :class="{'border-red-500': form.errors.target_production_per_day}"
                                     placeholder="Units per day"
                                     class="w-full"
                                     :min="0"
                                     :maxFractionDigits="2"
                                 />
-                                <small v-if="errors.target_production_per_day" class="text-red-500">{{ errors.target_production_per_day }}</small>
+                                <small v-if="form.errors.target_production_per_day" class="text-red-500">{{ form.errors.target_production_per_day }}</small>
                             </div>
                         </div>
 
@@ -107,12 +107,12 @@
                             <Textarea
                                 id="description"
                                 v-model="form.description"
-                                :class="{'border-red-500': errors.description}"
+                                :class="{'border-red-500': form.errors.description}"
                                 placeholder="Enter brand description (optional)"
                                 rows="4"
                                 class="w-full"
                             />
-                            <small v-if="errors.description" class="text-red-500">{{ errors.description }}</small>
+                            <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
                         </div>
                     </div>
 
@@ -172,7 +172,7 @@
                                 Brand is active and can be used
                             </label>
                         </div>
-                        <small v-if="errors.is_active" class="text-red-500">{{ errors.is_active }}</small>
+                        <small v-if="form.errors.is_active" class="text-red-500">{{ form.errors.is_active }}</small>
                     </div>
 
                     <!-- Form Actions -->
@@ -188,8 +188,8 @@
                             type="submit"
                             label="Save Brand" 
                             icon="pi pi-save"
-                            :loading="processing"
-                            :disabled="processing"
+                            :loading="form.processing"
+                            :disabled="form.processing"
                         />
                     </div>
                 </form>
@@ -200,9 +200,8 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
-import { brandApi } from '@/utils/api'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -211,15 +210,11 @@ import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
 import Checkbox from 'primevue/checkbox'
 
-const props = defineProps({
-    errors: Object
-})
-
 const page = usePage()
 const toast = useToast()
 
-// Form data with reactive handling
-const form = reactive({
+// Use Inertia form for CSRF protection
+const form = useForm({
     name: '',
     code: '',
     description: '',
@@ -228,9 +223,6 @@ const form = reactive({
     quality_standards: [],
     is_active: true
 })
-
-const processing = ref(false)
-const errors = ref({})
 
 // Quality standards management
 const addQualityStandard = () => {
@@ -244,50 +236,25 @@ const removeQualityStandard = (index) => {
     form.quality_standards.splice(index, 1)
 }
 
-// Submit form with API helper
-const submit = async () => {
-    if (processing.value) return
-    
-    processing.value = true
-    errors.value = {}
-    
-    try {
-        const { data } = await brandApi.createBrand(form)
-        
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Brand created successfully',
-            life: 3000
-        })
-        
-        // Redirect to brand list or detail
-        setTimeout(() => {
-            window.location.href = '/brands'
-        }, 1500)
-        
-    } catch (error) {
-        console.error('Submit error:', error)
-        
-        // Handle validation errors
-        if (error.status === 422 && error.data?.errors) {
-            errors.value = error.data.errors
+// Submit form using Inertia
+const submit = () => {
+    form.post('/brands', {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Brand created successfully',
+                life: 3000
+            })
+        },
+        onError: (errors) => {
             toast.add({
                 severity: 'warn',
                 summary: 'Validation Error',
                 detail: 'Please check the form fields and try again',
                 life: 5000
             })
-        } else {
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: error.message || 'An error occurred while saving the brand',
-                life: 3000
-            })
         }
-    } finally {
-        processing.value = false
-    }
+    })
 }
 </script>

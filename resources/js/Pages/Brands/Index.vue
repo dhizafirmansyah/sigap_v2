@@ -693,38 +693,44 @@ const deleteBrand = async () => {
     if (!selectedBrand.value) return
 
     deleting.value = true
-    try {
-        await brandApi.deleteBrand(selectedBrand.value.id)
-        
-        // Remove from local data
-        if (originalBrands.value?.data) {
-            originalBrands.value.data = originalBrands.value.data.filter(
-                brand => brand.id !== selectedBrand.value.id
-            )
+    
+    // Use Inertia router.delete() to handle CSRF properly
+    router.delete(`/brands/${selectedBrand.value.id}`, {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            // Remove from local data
+            if (originalBrands.value?.data) {
+                originalBrands.value.data = originalBrands.value.data.filter(
+                    brand => brand.id !== selectedBrand.value.id
+                )
+            }
+            
+            // Refresh filtered data
+            applyClientSideFilters()
+            
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Brand deleted successfully',
+                life: 3000
+            })
+            
+            deleteDialog.value = false
+            selectedBrand.value = null
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: errors.message || 'Failed to delete brand',
+                life: 5000
+            })
+        },
+        onFinish: () => {
+            deleting.value = false
         }
-        
-        // Refresh filtered data
-        applyClientSideFilters()
-        
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Brand deleted successfully',
-            life: 3000
-        })
-        
-        deleteDialog.value = false
-        selectedBrand.value = null
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.message || 'Failed to delete brand',
-            life: 3000
-        })
-    } finally {
-        deleting.value = false
-    }
+    })
 }
 
 // Utility functions

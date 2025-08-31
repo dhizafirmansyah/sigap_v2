@@ -277,8 +277,13 @@ import Dialog from 'primevue/dialog';
 const page = usePage()
 const toast = useToast()
 
-// Get location ID from route
-const locationId = page.props.location?.id || window.location.pathname.split('/').pop()
+// Get location ID from props or URL path  
+const locationId = props.location?.id || (() => {
+    const pathSegments = window.location.pathname.split('/');
+    // For show route: /locations/{id}
+    const locationsIndex = pathSegments.findIndex(segment => segment === 'locations');
+    return locationsIndex >= 0 && pathSegments[locationsIndex + 1] ? pathSegments[locationsIndex + 1] : null;
+})()
 
 // Props
 const props = defineProps({
@@ -332,39 +337,44 @@ const confirmDelete = () => {
     showDeleteDialog.value = true;
 };
 
-const deleteLocation = async () => {
-    try {
-        deleting.value = true;
-        await locationApi.deleteLocation(locationId);
-        
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Location deleted successfully',
-            life: 3000
-        });
-
-        // Redirect to index
-        router.visit('/locations');
-        
-    } catch (error) {
-        console.error('Error deleting location:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to delete location',
-            life: 3000
-        });
-    } finally {
-        deleting.value = false;
-        showDeleteDialog.value = false;
-    }
+const deleteLocation = () => {
+    deleting.value = true;
+    
+    router.delete(`/locations/${locationId}`, {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Location deleted successfully',
+                life: 3000
+            });
+        },
+        onError: (errors) => {
+            console.error('Delete error:', errors);
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to delete location',
+                life: 3000
+            });
+        },
+        onFinish: () => {
+            deleting.value = false;
+            showDeleteDialog.value = false;
+        }
+    });
 };
 
 // Lifecycle
 onMounted(() => {
-    // Use prop data initially, then fetch fresh data
-    fetchLocation();
+    // Initialize with props data if available
+    if (props.location && props.location.id) {
+        location.value = props.location;
+        loading.value = false;
+    } else {
+        // Fetch data if props not available
+        fetchLocation();
+    }
 });
 </script>
 

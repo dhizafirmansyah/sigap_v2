@@ -148,6 +148,15 @@ Route::prefix('api-test')->group(function () {
     });
 });
 
+// Kemas routes
+Route::middleware('auth')->group(function () {
+    Route::get('/kemas', [App\Http\Controllers\KemasController::class, 'index'])->name('kemas.index');
+    Route::get('/kemas/import', [App\Http\Controllers\KemasController::class, 'importPage'])->name('kemas.import');
+    Route::post('/kemas/import-preview', [App\Http\Controllers\KemasController::class, 'importPreview'])->name('kemas.import-preview');
+    Route::post('/kemas/save-imported', [App\Http\Controllers\KemasController::class, 'saveImported'])->name('kemas.save-imported');
+    Route::delete('/kemas/{kema}', [App\Http\Controllers\KemasController::class, 'destroy'])->name('kemas.destroy');
+});
+
 // Test page untuk API
 Route::get('test-api', function () {
     return view('api-test');
